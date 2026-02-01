@@ -1,8 +1,11 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { CodePanel } from "./components/CodePanel";
+import { ProblemDefinitionCard } from "./components/ProblemDefinitionCard";
+import { AIFeedbackCard } from "./components/AIFeedbackCard";
+import { useMemo } from "react";
 
 type Result = "correct" | "wrong" | null;
 type AttemptWrong = 0 | 1 | 2;
-
 type Problem = {
   topicLabel: string;
   title: string;
@@ -90,93 +93,26 @@ export default function App() {
       </header>
 
       <main className="grid">
-        {/* LEFT */}
-        <section className="panel left">
-          <div className="meta">{demoProblem.topicLabel}</div>
-          <div className="title">{demoProblem.title}</div>
-          <pre className="code">
-            <code>{demoProblem.code}</code>
-          </pre>
-        </section>
+        <CodePanel
+          topicLabel={demoProblem.topicLabel}
+          title={demoProblem.title}
+          code={demoProblem.code}
+        />
 
-        {/* RIGHT */}
         <section className="panel right">
-          {/* Problem definition (항상 고정) */}
-          <div className="card issue">
-            <h3>발견된 문제점</h3>
-            <div className="issueTitle">{demoProblem.issue.title}</div>
-            <p className="desc">{demoProblem.issue.description}</p>
+          <ProblemDefinitionCard
+            issueTitle={demoProblem.issue.title}
+            description={demoProblem.issue.description}
+            recommendedApproach={demoProblem.issue.recommendedApproach}
+          />
 
-            <div className="approach">
-              <div className="approachK">권장 해결 접근</div>
-              <ul>
-                {demoProblem.issue.recommendedApproach.map((t) => (
-                  <li key={t}>{t}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
+          <AIFeedbackCard
+            result={result}
+            attemptWrong={attemptWrong}
+            hint1={demoProblem.hint1}
+            refactorExample={demoProblem.refactorExample}
+          />
 
-          {/* AI Feedback */}
-          <div className="card feedback">
-            <div className="fbHead">
-              <h3 style={{ margin: 0 }}>AI 피드백</h3>
-              {badge && <span className={`badge ${badge.kind}`}>{badge.text}</span>}
-            </div>
-
-            {/* 제출 전 */}
-            {result === null && (
-              <div className="locked">
-                아직 제출되지 않았습니다.  
-                코드를 보고 문제점을 판단한 뒤 제출하세요.
-              </div>
-            )}
-
-            {/* 정답 */}
-            {result === "correct" && (
-              <>
-                <div className="fbText">
-                  (샘플) 문제의 핵심 위험 요소를 올바르게 인지했습니다.
-                  조건식에서 타입 해석 차이가 발생할 수 있다는 점을 고려한 판단입니다.
-                </div>
-
-                <details className="details">
-                  <summary>리팩토링 예시 보기 (선택)</summary>
-                  <pre className="codeSmall">
-                    <code>{demoProblem.refactorExample}</code>
-                  </pre>
-                </details>
-              </>
-            )}
-
-            {/* 오답 */}
-            {result === "wrong" && (
-              <>
-                <div className="fbText">
-                  (샘플) 조건식에서 발생할 수 있는 타입 해석 차이에 대한 고려가 부족합니다.
-                  오답 단계에 따라 힌트 또는 수정 예시가 제공됩니다.
-                </div>
-
-                {attemptWrong >= 1 && (
-                  <details className="details" open>
-                    <summary>추가 힌트 보기</summary>
-                    <div className="hintBox">{demoProblem.hint1}</div>
-                  </details>
-                )}
-
-                {attemptWrong >= 2 && (
-                  <details className="details" open>
-                    <summary>수정 예시 코드 보기</summary>
-                    <pre className="codeSmall">
-                      <code>{demoProblem.refactorExample}</code>
-                    </pre>
-                  </details>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Actions */}
           <div className="actions">
             <button className="btn primary" onClick={() => submit("correct")}>
               제출(정답)
