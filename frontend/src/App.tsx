@@ -1,59 +1,22 @@
-import { useState } from "react";
+import { use, useState } from "react";
 import { CodePanel } from "./components/CodePanel";
 import { ProblemDefinitionCard } from "./components/ProblemDefinitionCard";
 import { AIFeedbackCard } from "./components/AIFeedbackCard";
 import { useMemo } from "react";
 
+import { problems } from "./data/problems";
+import type { Problem } from "./types/problem";
+
 type Result = "correct" | "wrong" | null;
 type AttemptWrong = 0 | 1 | 2;
-type Problem = {
-  topicLabel: string;
-  title: string;
-  code: string;
-  issue: {
-    title: string;
-    description: string;
-    recommendedApproach: string[];
-  };
-  hint1: string;
-  refactorExample: string;
-};
 
-const demoProblem: Problem = {
-  topicLabel: "정수 / 형 변환",
-  title: "부호가 다른 정수의 조건식",
-  code: `#include <stdint.h>
-
-void process(uint16_t len)
-{
-    int8_t offset = -1;
-
-    if (len + offset > 0)
-    {
-        /* ... */
-    }
-}`,
-  issue: {
-    title: "부호 연산 주의",
-    description:
-      "부호가 다른 정수들이 함께 연산되면 조건식/비교에서 값이 의도와 다르게 해석될 수 있습니다. 이런 차이는 특정 입력에서만 드러나 디버깅이 어려운 잠재 오류로 이어질 수 있습니다.",
-    recommendedApproach: [
-      "부호/폭이 다른 값이 섞이는 연산이 있는지 먼저 확인",
-      "조건식은 계산과 비교를 분리해 의도를 드러내기",
-    ],
-  },
-  hint1:
-    "조건식 안에 연산(+, -, *, /)이 섞여 있다면, 참여하는 값들의 부호/폭이 같은지부터 확인하세요. 계산을 중간 변수로 분리하면 비교가 명확해집니다.",
-  refactorExample: `int32_t sum = (int32_t)len + (int32_t)offset;
-if (sum > 0)
-{
-    /* ... */
-}`,
-};
 
 export default function App() {
   const [result, setResult] = useState<Result>(null);
   const [attemptWrong, setAttemptWrong] = useState<AttemptWrong>(0);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const currentProblem: Problem = problems[currentIndex];  
 
   /**
    * 제출 로직
@@ -94,23 +57,23 @@ export default function App() {
 
       <main className="grid">
         <CodePanel
-          topicLabel={demoProblem.topicLabel}
-          title={demoProblem.title}
-          code={demoProblem.code}
+          topicLabel={currentProblem.topic}
+          title={currentProblem.title}
+          code={currentProblem.code}
         />
 
         <section className="panel right">
           <ProblemDefinitionCard
-            issueTitle={demoProblem.issue.title}
-            description={demoProblem.issue.description}
-            recommendedApproach={demoProblem.issue.recommendedApproach}
+            issueTitle={currentProblem.issue.title}
+            description={currentProblem.issue.description}
+            recommendedApproach={currentProblem.issue.recommendedApproach}
           />
 
           <AIFeedbackCard
             result={result}
             attemptWrong={attemptWrong}
-            hint1={demoProblem.hint1}
-            refactorExample={demoProblem.refactorExample}
+            hint1={currentProblem.hint1}
+            refactorExample={currentProblem.refactorExample}
           />
 
           <div className="actions">
