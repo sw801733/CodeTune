@@ -5,6 +5,7 @@ import { problems } from "../data/problems";
 import { CodePanel } from "../components/CodePanel";
 import { ProblemDefinitionCard } from "../components/ProblemDefinitionCard";
 import { AIFeedbackCard } from "../components/AIFeedbackCard";
+import { markSolved, markTried } from "../storage/progress";
 
 type Result = "correct" | "wrong" | null;
 type AttemptWrong = 0 | 1 | 2;
@@ -28,12 +29,16 @@ export function PracticePage() {
     const currentProblem = hasProblems ? problems[safeIndex] : null;
 
     const submit = (judgement: Exclude<Result, null>) => {
+        if (!currentProblem) return;
+
         if (judgement === "correct") {
             setResult("correct");
+            markSolved(currentProblem.id);
             return;
         }
         setResult("wrong");
         setAttemptWrong((prev) => (prev < 2 ? ((prev + 1) as AttemptWrong) : 2));
+        markTried(currentProblem.id);
     };
 
     const resetForMove = () => {
