@@ -1,11 +1,9 @@
-import { use, useState } from "react";
+import { useState } from "react";
 import { CodePanel } from "./components/CodePanel";
 import { ProblemDefinitionCard } from "./components/ProblemDefinitionCard";
 import { AIFeedbackCard } from "./components/AIFeedbackCard";
-import { useMemo } from "react";
 
 import { problems } from "./data/problems";
-import type { Problem } from "./types/problem";
 
 type Result = "correct" | "wrong" | null;
 type AttemptWrong = 0 | 1 | 2;
@@ -16,7 +14,10 @@ export default function App() {
   const [attemptWrong, setAttemptWrong] = useState<AttemptWrong>(0);
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const currentProblem: Problem = problems[currentIndex];  
+
+  const hasProblems = problems.length > 0;
+  const safeIndex = hasProblems ? currentIndex % problems.length : 0;
+  const currentProblem = hasProblems ? problems[safeIndex] : null;
 
   /**
    * 제출 로직
@@ -34,60 +35,105 @@ export default function App() {
     setAttemptWrong((prev) => (prev < 2 ? ((prev + 1) as AttemptWrong) : 2));
   };
 
-  const nextProblem = () => {
+  const resetForMove = () => {
     setResult(null);
     setAttemptWrong(0);
   };
 
-  const badge = useMemo(() => {
-    if (result === "correct") return { text: "정답", kind: "ok" as const };
-    if (result === "wrong")
-      return { text: attemptWrong >= 2 ? "오답 (2차)" : "오답", kind: "ng" as const };
-    return null;
-  }, [result, attemptWrong]);
+  const prevProblem = () => {
+    if (!hasProblems) return;
+
+    setCurrentIndex((prev) => (prev <= 0 ? 0 : prev - 1));
+    resetForMove();
+  }
+
+  const nextProblem = () => {
+    if (!hasProblems) return;
+
+    setCurrentIndex((prev) => {
+      const last = problems.length - 1;
+      return prev >= last ? prev : prev + 1;
+    });
+    resetForMove();
+  };
 
   return (
     <div className="page">
       <header className="topbar">
         <div className="brand">Practice Prototype</div>
         <div className="mini">
+          {hasProblems && (
+            <>
+              문제 <b>{safeIndex + 1}</b> / <b>{problems.length}</b> &nbsp; | &nbsp;
+            </>
+          )}
           result: <b>{String(result)}</b> / wrongAttempt: <b>{attemptWrong}</b>
         </div>
       </header>
 
       <main className="grid">
-        <CodePanel
-          topicLabel={currentProblem.topic}
-          title={currentProblem.title}
-          code={currentProblem.code}
-        />
-
-        <section className="panel right">
-          <ProblemDefinitionCard
-            issueTitle={currentProblem.issue.title}
-            description={currentProblem.issue.description}
-            recommendedApproach={currentProblem.issue.recommendedApproach}
-          />
-
-          <AIFeedbackCard
-            result={result}
-            attemptWrong={attemptWrong}
-            hint1={currentProblem.hint1}
-            refactorExample={currentProblem.refactorExample}
-          />
-
-          <div className="actions">
-            <button className="btn primary" onClick={() => submit("correct")}>
-              제출(정답)
-            </button>
-            <button className="btn" onClick={() => submit("wrong")}>
-              제출(오답)
-            </button>
-            <button className="btn ghost" onClick={nextProblem}>
-              다음 문제
-            </button>
+        {!currentProblem ? (
+          <div style={{ padding: "18px" }}>
+            문제가 없습니다. <code>src/data/problems.ts</code>에 문제를 추가하세요.
           </div>
-        </section>
+        ) : (
+          <>
+            <CodePanel
+              topicLabel={currentProblem.topic}
+              title={currentProblem.title}
+              code={currentProblem.code}
+            />
+
+            <section className="panel right">
+              <ProblemDefinitionCard
+                issueTitle={currentProblem.issue.title}
+                description={currentProblem.issue.description}
+                recommendedApproach={currentProblem.issue.recommendedApproach}
+              />
+
+              <AIFeedbackCard
+                result={result}
+                attemptWrong={attemptWrong}
+                hint1={currentProblem.hint1}
+                refactorExample={currentProblem.refactorExample}
+              />
+
+              <div className="actions">
+                <button
+                  className="btn ghost"
+                  disabled={!currentProblem || safeIndex <= 0}
+                  onClick={prevProblem}
+                >
+                  이전 문제
+                </button>
+
+                <button
+                  className="btn primary"
+                  disabled={!currentProblem}
+                  onClick={() => submit("correct")}
+                >
+                  제출(정답)
+                </button>
+
+                <button
+                  className="btn"
+                  disabled={!currentProblem}
+                  onClick={() => submit("wrong")}
+                >
+                  제출(오답)
+                </button>
+
+                <button
+                  className="btn ghost"
+                  disabled={!currentProblem || safeIndex >= problems.length - 1}
+                  onClick={nextProblem}
+                >
+                  다음 문제
+                </button>
+              </div>
+            </section>
+          </>
+        )}
       </main>
 
       <style>{css}</style>
