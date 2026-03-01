@@ -1,9 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { use, useEffect, useState } from "react";
 import { loadProgress, type ProgressStatus } from "../storage/progress";
 import { problems } from "../data/problems";
 
 export function HomePage() {
+    const location = useLocation();
+
     const [progress, setProgress] = useState(loadProgress());
     const [sortUnsolvedFirst, setSortUnsolvedFirst] = useState(true);
 
@@ -23,7 +25,7 @@ export function HomePage() {
 
     useEffect(() => {
         setProgress(loadProgress());
-    });
+    }, [location.key]);
 
     return (
         <div style={{ padding: 18, fontFamily: "sans-serif" }}>
