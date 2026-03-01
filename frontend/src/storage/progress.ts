@@ -1,14 +1,38 @@
 export type ProgressStatus = "unseen" | "tried" | "solved";
+export type Result = "correct" | "wrong" | null;
 
 export type ProgressMap = Record<
     string,
     {
         status: ProgressStatus;
+        attemptWrong: number;
+        lastResult: Result;
         updatedAt: number;
     }
 >;
 
 const KEY = "codetune.progress.v1";
+
+export function updateProgress(
+    problemId: string,
+    data: {
+        status: ProgressStatus;
+        attemptWrong: number;
+        lastResult: Result;
+    }
+) {
+    const map = loadProgress();
+    map[problemId] = {
+        ...data,
+        updatedAt: Date.now(),
+    };
+    saveProgress(map);
+}
+
+export function getProgress(problemId: string) {
+    const map = loadProgress();
+    return map[problemId] ?? null;
+}
 
 export function loadProgress(): ProgressMap {
     try {
@@ -25,25 +49,4 @@ export function loadProgress(): ProgressMap {
 
 export function saveProgress(map: ProgressMap) {
     localStorage.setItem(KEY, JSON.stringify(map));
-}
-
-export function getStatus(problemId: string): ProgressStatus {
-    const map = loadProgress();
-    return map[problemId]?.status ?? "unseen";
-}
-
-export function setStatus(problemId: string, status: ProgressStatus) {
-    const map = loadProgress();
-    map[problemId] = { status, updatedAt: Date.now() };
-    saveProgress(map);
-}
-
-export function markTried(problemId: string) {
-    const cur = getStatus(problemId);
-    if (cur == "solved") return; // solved는 tried로 내려가지 않음
-    setStatus(problemId, "tried");
-}
-
-export function markSolved(problemId: string) {
-    setStatus(problemId, "solved");
 }

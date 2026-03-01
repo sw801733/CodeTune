@@ -1,14 +1,21 @@
-import { useMemo, useEffect, useState } from "react";
+import { useMemo, useEffect, useState, use } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { problems } from "../data/problems";
 import { CodePanel } from "../components/CodePanel";
 import { ProblemDefinitionCard } from "../components/ProblemDefinitionCard";
 import { AIFeedbackCard } from "../components/AIFeedbackCard";
-import { markSolved, markTried } from "../storage/progress";
+import { getProgress, updateProgress } from "../storage/progress";
 
 type Result = "correct" | "wrong" | null;
 type AttemptWrong = 0 | 1 | 2;
+
+type SubmitPayload = {
+    problemId: string;
+    code: string;            // ✅ userCode
+    attemptWrong: number;    // 이번 제출까지 반영된 오답 횟수
+    clientTimestamp: number; // Date.now()
+};
 
 export function PracticePage() {
     const navigate = useNavigate();
@@ -23,18 +30,36 @@ export function PracticePage() {
 
     const [result, setResult] = useState<Result>(null);
     const [attemptWrong, setAttemptWrong] = useState<AttemptWrong>(0);
-
+    const [userCode, setUserCode] = useState<string>(currentProblem?.code ?? "");
     const submit = (judgement: Exclude<Result, null>) => {
         if (!currentProblem) return;
 
+        const nextAttemptWrong =
+            judgement === "wrong"
+                ? Math.min(attemptWrong + 1, 2)
+                : attemptWrong;
+
+        const payload = {
+            problemId: currentProblem.id,
+            code: userCode,
+            attemptWrong: nextAttemptWrong,
+            clientTimestamp: Date.now(),
+        };
+
+        console.log("[submit payload]", payload);
+
         if (judgement === "correct") {
             setResult("correct");
-            markSolved(currentProblem.id);
-            return;
+        } else {
+            setResult("wrong");
+            setAttemptWrong(nextAttemptWrong as AttemptWrong);
         }
-        setResult("wrong");
-        setAttemptWrong((prev) => (prev < 2 ? ((prev + 1) as AttemptWrong) : 2));
-        markTried(currentProblem.id);
+
+        updateProgress(currentProblem.id, {
+            status: judgement === "correct" ? "solved" : "tried",
+            attemptWrong: nextAttemptWrong,
+            lastResult: judgement,
+        });
     };
 
     const resetForMove = () => {
@@ -43,8 +68,17 @@ export function PracticePage() {
     };
 
     useEffect(() => {
-        if (!hasProblems) return;
-        resetForMove();
+        if (!currentProblem) return;
+
+        const saved = getProgress(currentProblem.id);
+
+        if (saved) {
+            setResult(saved.lastResult);
+            setAttemptWrong(saved.attemptWrong as AttemptWrong);
+        } else {
+            resetForMove();
+        }
+        setUserCode(currentProblem?.code ?? "");
     }, [id]);
 
     const prevProblem = () => {
@@ -100,7 +134,8 @@ export function PracticePage() {
                         <CodePanel
                             topicLabel={currentProblem.topic}
                             title={currentProblem.title}
-                            code={currentProblem.code}
+                            code={userCode}
+                            onChange={setUserCode}
                         />
 
                         <section className="panel right">
@@ -193,4 +228,10 @@ const css = `
   .btn{background:#1c2040;border:1px solid #2f3360;border-radius:10px;padding:10px 12px;color:#e6e8ef;font-weight:900;}
   .btn.primary{background:#2b62ff;border-color:#2b62ff;color:#fff;}
   .btn.ghost{background:transparent;}
-`;
+  .codeInput{
+  width:100%;
+  resize:none;
+  outline:none;
+  color:inherit;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+  }`;
