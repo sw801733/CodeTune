@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { problems } from "../data/problems";
@@ -14,19 +14,15 @@ export function PracticePage() {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
 
-    // ✅ URL의 id로 현재 문제를 찾음 (목록에서 들어오는 흐름)
-    const initialIndex = Math.max(
-        0,
-        problems.findIndex((p) => p.id === id)
-    );
+    const hasProblems = problems.length > 0;
 
-    const [currentIndex, setCurrentIndex] = useState<number>(initialIndex);
+    // ✅ URL의 :id 가 source of truth
+    const indexFromUrl = hasProblems ? problems.findIndex((p) => p.id === id) : -1;
+    const safeIndex = indexFromUrl >= 0 ? indexFromUrl : 0;
+    const currentProblem = hasProblems ? problems[safeIndex] : null;
+
     const [result, setResult] = useState<Result>(null);
     const [attemptWrong, setAttemptWrong] = useState<AttemptWrong>(0);
-
-    const hasProblems = problems.length > 0;
-    const safeIndex = hasProblems ? currentIndex : 0;
-    const currentProblem = hasProblems ? problems[safeIndex] : null;
 
     const submit = (judgement: Exclude<Result, null>) => {
         if (!currentProblem) return;
@@ -46,19 +42,22 @@ export function PracticePage() {
         setAttemptWrong(0);
     };
 
+    useEffect(() => {
+        if (!hasProblems) return;
+        resetForMove();
+    }, [id]);
+
     const prevProblem = () => {
         if (!hasProblems) return;
-        setCurrentIndex((prev) => (prev <= 0 ? 0 : prev - 1));
-        resetForMove();
+        const prevIndex = safeIndex <= 0 ? 0 : safeIndex - 1;
+        navigate(`/practice/${problems[prevIndex].id}`);
     };
 
     const nextProblem = () => {
         if (!hasProblems) return;
-        setCurrentIndex((prev) => {
-            const last = problems.length - 1;
-            return prev >= last ? prev : prev + 1; // ✅ 순환 없음
-        });
-        resetForMove();
+        const last = problems.length - 1;
+        const nextIndex = safeIndex >= last ? last : safeIndex + 1; // ✅ 순환 없음
+        navigate(`/practice/${problems[nextIndex].id}`);
     };
 
     const badge = useMemo(() => {
