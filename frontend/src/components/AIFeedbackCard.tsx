@@ -2,24 +2,29 @@ type Result = "correct" | "wrong" | null;
 type AttemptWrong = 0 | 1 | 2;
 
 type AIFeedbackCardProps = {
-    result: Result;
-    attemptWrong: AttemptWrong;
-    hint1: string;
-    refactorExample: string;
+  result: Result;
+  attemptWrong: AttemptWrong;
+  // ✅ Phase 4-1: 제출 결과에 대한 텍스트(모의 분석/AI 응답)
+  feedbackText: string;
+  // ✅ 오답 1차 힌트(선택)
+  hint1?: string;
+  // ✅ 오답 2차 또는 정답 시 리팩토링 예시(선택)
+  refactorExample?: string;
 };
 
 export function AIFeedbackCard({
-    result,
-    attemptWrong,
-    hint1,
-    refactorExample
+  result,
+  attemptWrong,
+  feedbackText,
+  hint1,
+  refactorExample
 }: AIFeedbackCardProps) {
   const badge =
     result === "correct"
       ? { text: "정답", kind: "ok" as const }
       : result === "wrong"
-      ? { text: attemptWrong >= 2 ? "오답 (2차)" : "오답", kind: "ng" as const }
-      : null;
+        ? { text: attemptWrong >= 2 ? "오답 (2차)" : "오답", kind: "ng" as const }
+        : null;
 
   return (
     <div className="card feedback">
@@ -39,34 +44,34 @@ export function AIFeedbackCard({
       {result === "correct" && (
         <>
           <div className="fbText">
-            (샘플) 문제의 핵심 위험 요소를 올바르게 인지했습니다. 조건식에서 타입 해석 차이가
-            발생할 수 있다는 점을 고려한 판단입니다.
+            {feedbackText || "정답입니다."}
           </div>
 
-          <details className="details">
-            <summary>리팩토링 예시 보기 (선택)</summary>
-            <pre className="codeSmall">
-              <code>{refactorExample}</code>
-            </pre>
-          </details>
+          {refactorExample && (
+            <details className="details">
+              <summary>리팩토링 예시 보기 (선택)</summary>
+              <pre className="codeSmall">
+                <code>{refactorExample}</code>
+              </pre>
+            </details>
+          )}
         </>
       )}
 
       {result === "wrong" && (
         <>
           <div className="fbText">
-            (샘플) 조건식에서 발생할 수 있는 타입 해석 차이에 대한 고려가 부족합니다. 오답 단계에
-            따라 힌트 또는 수정 예시가 제공됩니다.
+            {feedbackText || "오답입니다."}
           </div>
 
-          {attemptWrong >= 1 && (
+          {attemptWrong >= 1 && hint1 && (
             <details className="details" open>
               <summary>추가 힌트 보기</summary>
               <div className="hintBox">{hint1}</div>
             </details>
           )}
 
-          {attemptWrong >= 2 && (
+          {attemptWrong >= 2 && refactorExample && (
             <details className="details" open>
               <summary>수정 예시 코드 보기</summary>
               <pre className="codeSmall">

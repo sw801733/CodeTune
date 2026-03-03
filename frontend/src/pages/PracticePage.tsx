@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState, use } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { problems } from "../data/problems";
@@ -6,15 +6,13 @@ import { CodePanel } from "../components/CodePanel";
 import { ProblemDefinitionCard } from "../components/ProblemDefinitionCard";
 import { AIFeedbackCard } from "../components/AIFeedbackCard";
 import { getProgress, updateProgress } from "../storage/progress";
+import { type AttemptWrong, type Result } from "../services/analyze";
+import { submitFeedback, getRestoredFeedback } from "../services/submit";
 
-type Result = "correct" | "wrong" | null;
-type AttemptWrong = 0 | 1 | 2;
-
-type SubmitPayload = {
-    problemId: string;
-    code: string;            // ✅ userCode
-    attemptWrong: number;    // 이번 제출까지 반영된 오답 횟수
-    clientTimestamp: number; // Date.now()
+type FeedbackState = {
+    feedbackText: string;
+    hint1?: string;
+    refactorExample?: string;
 };
 
 export function PracticePage() {
@@ -28,10 +26,23 @@ export function PracticePage() {
     const safeIndex = indexFromUrl >= 0 ? indexFromUrl : 0;
     const currentProblem = hasProblems ? problems[safeIndex] : null;
 
+
     const [result, setResult] = useState<Result>(null);
     const [attemptWrong, setAttemptWrong] = useState<AttemptWrong>(0);
     const [userCode, setUserCode] = useState<string>(currentProblem?.code ?? "");
-    const submit = (judgement: Exclude<Result, null>) => {
+    const [feedback, setFeedback] = useState<FeedbackState>({ feedbackText: "" });
+
+    const applyResult = (
+        judgement: Exclude<Result, null>,
+        nextAttemptWrong: AttemptWrong
+    ) => {
+        setResult(judgement);
+        if (judgement === "wrong") {
+            setAttemptWrong(nextAttemptWrong);
+        }
+    };
+
+    const submit = async (judgement: Exclude<Result, null>) => {
         if (!currentProblem) return;
 
         const nextAttemptWrong =
@@ -48,12 +59,17 @@ export function PracticePage() {
 
         console.log("[submit payload]", payload);
 
-        if (judgement === "correct") {
-            setResult("correct");
-        } else {
-            setResult("wrong");
-            setAttemptWrong(nextAttemptWrong as AttemptWrong);
-        }
+        // ✅ 상태 적용 (한 번만)
+        applyResult(judgement, nextAttemptWrong as AttemptWrong);
+
+        const fb = await submitFeedback({
+            problem: currentProblem,
+            judgement,
+            attemptWrong: nextAttemptWrong as AttemptWrong,
+            code: userCode,
+        });
+
+        setFeedback(fb);
 
         updateProgress(currentProblem.id, {
             status: judgement === "correct" ? "solved" : "tried",
@@ -65,6 +81,7 @@ export function PracticePage() {
     const resetForMove = () => {
         setResult(null);
         setAttemptWrong(0);
+        setFeedback({ feedbackText: "" });
     };
 
     useEffect(() => {
@@ -79,7 +96,21 @@ export function PracticePage() {
             resetForMove();
         }
         setUserCode(currentProblem?.code ?? "");
-    }, [id]);
+
+        // Phase 4-1: 저장된 상태가 있으면 그 상태 기준으로 목업 피드백도 복원
+        if (saved) {
+            const jb = (saved.lastResult ?? "wrong") as Exclude<Result, null>;
+            const fb = getRestoredFeedback({
+                problem: currentProblem,
+                code: currentProblem.code,
+                savedResult: jb,
+                savedAttemptWrong: (saved.attemptWrong as AttemptWrong) ?? 0,
+            });
+            setFeedback(fb);
+        } else {
+            setFeedback({ feedbackText: "" });
+        }
+    }, [currentProblem?.id]);
 
     const resetCode = () => {
         if (!currentProblem) return;
@@ -153,8 +184,9 @@ export function PracticePage() {
                             <AIFeedbackCard
                                 result={result}
                                 attemptWrong={attemptWrong}
-                                hint1={currentProblem.hint1}
-                                refactorExample={currentProblem.refactorExample}
+                                feedbackText={feedback.feedbackText}
+                                hint1={feedback.hint1}
+                                refactorExample={feedback.refactorExample}
                             />
 
                             <div className="actions">
