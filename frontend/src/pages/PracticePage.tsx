@@ -81,6 +81,11 @@ export function PracticePage() {
         setUserCode(currentProblem?.code ?? "");
     }, [id]);
 
+    const resetCode = () => {
+        if (!currentProblem) return;
+        setUserCode(currentProblem.code);
+    };
+
     const prevProblem = () => {
         if (!hasProblems) return;
         const prevIndex = safeIndex <= 0 ? 0 : safeIndex - 1;
@@ -153,6 +158,14 @@ export function PracticePage() {
                             />
 
                             <div className="actions">
+                                <button
+                                    className="btn ghost"
+                                    disabled={!currentProblem}
+                                    onClick={resetCode}
+                                >
+                                    Reset
+                                </button>
+
                                 <button
                                     className="btn ghost"
                                     disabled={!currentProblem || safeIndex <= 0}
@@ -234,4 +247,18 @@ const css = `
   outline:none;
   color:inherit;
   font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
-  }`;
+  }
+  .code-panel{
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.editor-wrap{
+  flex:1;
+  min-height:0;        /* grid/flex 내부에서 Monaco 스크롤 제대로 되게 하는 핵심 */
+  border:1px solid #22254a;
+  border-radius:10px;
+  overflow:hidden;     /* Monaco 모서리 깔끔하게 */
+  background:#15182a;
+}`;
