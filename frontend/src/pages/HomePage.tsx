@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { loadProgress, type ProgressStatus } from "../storage/progress";
 import { problems } from "../data/problems";
 
@@ -19,7 +19,7 @@ export function HomePage() {
         const statusA = progress[a.id]?.status ?? "unseen";
         const statusB = progress[b.id]?.status ?? "unseen";
 
-        const rank = (status: string) => (status === "unseen" ? 2 : status === "tried" ? 1 : 0);
+        const rank = (status: ProgressStatus) => (status === "unseen" ? 2 : status === "tried" ? 1 : 0);
         return rank(statusA) - rank(statusB);
     });
 
@@ -32,12 +32,6 @@ export function HomePage() {
             <h1 style={{ margin: "0 0 12px" }}>CodeTune</h1>
             <div style={{ opacity: 0.7, marginBottom: 12 }}>
                 문제를 선택해서 연습을 시작하세요.
-            </div>
-
-            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
-                <div style={{ fontSize: 12, opacity: 0.8 }}>
-                    해결 <b>{solvedCount}</b> / <b>{totalCount}</b> · 시도함 <b>{triedCount}</b>
-                </div>
             </div>
 
             <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
@@ -63,6 +57,12 @@ export function HomePage() {
             <div style={{ display: "grid", gap: 10 }}>
                 {displayedProblems.map((p, idx) => {
                     const status = progress[p.id]?.status ?? "unseen";
+                    const statusStyle =
+                        status === "solved"
+                            ? { background: "#e6fff4", borderColor: "#2ecc71", color: "#2ecc71" }
+                            : status === "tried"
+                                ? { background: "#fff8e6", borderColor: "#f39c12", color: "#f39c12" }
+                                : { opacity: 0.5 };
                     return (
                         <Link
                             key={p.id}
@@ -86,7 +86,7 @@ export function HomePage() {
                                         padding: "4px 8px",
                                         borderRadius: 999,
                                         border: "1px solid #ddd",
-                                        opacity: status === "unseen" ? 0.5 : 1,
+                                        ...statusStyle,
                                     }}
                                 >
                                     {status === "unseen" ? "미시도" : status === "tried" ? "시도함" : "해결"}

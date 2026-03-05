@@ -31,6 +31,8 @@ export function PracticePage() {
     const [attemptWrong, setAttemptWrong] = useState<AttemptWrong>(0);
     const [userCode, setUserCode] = useState<string>(currentProblem?.code ?? "");
     const [feedback, setFeedback] = useState<FeedbackState>({ feedbackText: "" });
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
     const applyResult = (
         judgement: Exclude<Result, null>,
@@ -44,44 +46,57 @@ export function PracticePage() {
 
     const submit = async (judgement: Exclude<Result, null>) => {
         if (!currentProblem) return;
+        if (isSubmitting) return; // 중복 제출 방지
 
-        const nextAttemptWrong =
-            judgement === "wrong"
-                ? Math.min(attemptWrong + 1, 2)
-                : attemptWrong;
+        setIsSubmitting(true);
+        setSubmitError(null); // 제출 시도마다 에러 초기화
+        try {
 
-        const payload = {
-            problemId: currentProblem.id,
-            code: userCode,
-            attemptWrong: nextAttemptWrong,
-            clientTimestamp: Date.now(),
-        };
+            const nextAttemptWrong =
+                judgement === "wrong"
+                    ? Math.min(attemptWrong + 1, 2)
+                    : attemptWrong;
 
-        console.log("[submit payload]", payload);
+            const payload = {
+                problemId: currentProblem.id,
+                code: userCode,
+                attemptWrong: nextAttemptWrong,
+                clientTimestamp: Date.now(),
+            };
 
-        // ✅ 상태 적용 (한 번만)
-        applyResult(judgement, nextAttemptWrong as AttemptWrong);
+            console.log("[submit payload]", payload);
 
-        const fb = await submitFeedback({
-            problem: currentProblem,
-            judgement,
-            attemptWrong: nextAttemptWrong as AttemptWrong,
-            code: userCode,
-        });
+            // ✅ 상태 적용 (한 번만)
+            applyResult(judgement, nextAttemptWrong as AttemptWrong);
 
-        setFeedback(fb);
+            const fb = await submitFeedback({
+                problem: currentProblem,
+                judgement,
+                attemptWrong: nextAttemptWrong as AttemptWrong,
+                code: userCode,
+            });
 
-        updateProgress(currentProblem.id, {
-            status: judgement === "correct" ? "solved" : "tried",
-            attemptWrong: nextAttemptWrong,
-            lastResult: judgement,
-        });
+            setFeedback(fb);
+
+            updateProgress(currentProblem.id, {
+                status: judgement === "correct" ? "solved" : "tried",
+                attemptWrong: nextAttemptWrong,
+                lastResult: judgement,
+            });
+        } catch (e) {
+            const message = e instanceof Error ? e.message : "제출 중 오류가 발생했습니다.";
+            setSubmitError(message);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const resetForMove = () => {
         setResult(null);
         setAttemptWrong(0);
         setFeedback({ feedbackText: "" });
+        setSubmitError(null);
+        setIsSubmitting(false);
     };
 
     useEffect(() => {
@@ -96,6 +111,8 @@ export function PracticePage() {
             resetForMove();
         }
         setUserCode(currentProblem?.code ?? "");
+        setSubmitError(null);
+        setIsSubmitting(false);
 
         // Phase 4-1: 저장된 상태가 있으면 그 상태 기준으로 목업 피드백도 복원
         if (saved) {
@@ -181,6 +198,13 @@ export function PracticePage() {
                                 recommendedApproach={currentProblem.issue.recommendedApproach}
                             />
 
+                            {submitError && (
+                                <div className="card" style={{ borderLeft: "4px solid #ff5c5c" }}>
+                                    <div style={{ fontWeight: 900, marginBottom: 6 }}>제출 오류</div>
+                                    <div className="desc">{submitError}</div>
+                                </div>
+                            )}
+
                             <AIFeedbackCard
                                 result={result}
                                 attemptWrong={attemptWrong}
@@ -209,14 +233,14 @@ export function PracticePage() {
                                 {/* ✅ 지금은 개발 중이니까 제출 2개 유지 */}
                                 <button
                                     className="btn primary"
-                                    disabled={!currentProblem}
+                                    disabled={!currentProblem || isSubmitting}
                                     onClick={() => submit("correct")}
                                 >
                                     제출(정답)
                                 </button>
                                 <button
                                     className="btn"
-                                    disabled={!currentProblem}
+                                    disabled={!currentProblem || isSubmitting}
                                     onClick={() => submit("wrong")}
                                 >
                                     제출(오답)
@@ -228,6 +252,14 @@ export function PracticePage() {
                                     onClick={nextProblem}
                                 >
                                     다음 문제
+                                </button>
+
+                                <button
+                                    className="btn ghost"
+                                    disabled={!currentProblem || isSubmitting}
+                                    onClick={resetForMove}   // 또는 resetAttempt
+                                >
+                                    시도 초기화
                                 </button>
                             </div>
                         </section>
