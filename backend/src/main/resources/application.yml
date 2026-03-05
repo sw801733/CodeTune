@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: codetune-backend
+
+codetune:
+  llm:
+    mock-enabled: true
+    openai:
+      base-url: https://api.openai.com
+      model: gpt-4.1-mini
+      timeout-millis: 5000

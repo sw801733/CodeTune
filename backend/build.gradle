@@ -1,0 +1,37 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.4.3'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.codetune'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // REST API endpoint implementation for /api/analyze.
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    // Bean validation for incoming request payloads in Controller.
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // Lombok is used to reduce boilerplate constructors/getters in DTO/service classes.
+    compileOnly 'org.projectlombok:lombok:1.18.42'
+    annotationProcessor 'org.projectlombok:lombok:1.18.42'
+    // Basic unit/integration test infrastructure for build verification.
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
